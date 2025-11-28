@@ -3,7 +3,7 @@ class Database {
     private $host = 'localhost';
     private $db_name = 'alcides_app';
     private $username = 'root';
-    private $password = ''; // Coloque sua senha se tiver
+    private $password = 'usbw'; 
     public $conn;
 
     public function getConnection() {

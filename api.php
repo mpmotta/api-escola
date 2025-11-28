@@ -1,70 +1,136 @@
 <?php
-require_once 'models/Aluno.php';
-require_once 'models/Chat.php';
-require_once 'models/Solicitacao.php';
+// --- 1. MOSTRAR ERROS (Para você ver se algo der errado) ---
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-class AppController {
-    private $db;
+// --- 2. PERMISSÕES DE ACESSO (CORS) ---
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 
-    public function __construct($db) {
-        $this->db = $db;
+if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+// --- 3. IMPORTAR ARQUIVOS (Se faltar algum, ele avisa) ---
+$files = [
+    'config/Database.php',
+    'controllers/AuthController.php',
+    'controllers/TesteController.php',
+    'controllers/AppController.php'
+];
+
+foreach ($files as $file) {
+    if (!file_exists($file)) {
+        die(json_encode(["erro_critico" => "Arquivo faltando: $file. Verifique as pastas controllers e config."]));
     }
+    require_once $file;
+}
 
-    // 1. Salvar Token do Firebase (Para notificações)
-    public function salvarToken() {
-        $data = json_decode(file_get_contents("php://input"));
-        
-        if(!isset($data->id_aluno) || !isset($data->token)) {
-            echo json_encode(["sucesso" => false, "mensagem" => "Dados incompletos"]);
-            return;
-        }
-        
-        $model = new Aluno($this->db);
-        // Se o app não mandar a plataforma, assume android
-        $plat = isset($data->plataforma) ? $data->plataforma : 'android';
-        
-        if($model->atualizarToken($data->id_aluno, $data->token, $plat)) {
-            echo json_encode(["sucesso" => true, "mensagem" => "Token atualizado"]);
+// --- 4. CONECTAR NO BANCO ---
+try {
+    $database = new Database();
+    $db = $database->getConnection();
+} catch (Exception $e) {
+    die(json_encode(["erro_critico" => "Banco não conectou: " . $e->getMessage()]));
+}
+
+// --- 5. ROTEADOR HÍBRIDO (O Segredo para funcionar no XAMPP) ---
+
+// Tenta ler do jeito bonito (/provas)
+$path_info = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
+$parts = explode('/', trim($path_info, '/'));
+$recurso_path = isset($parts[0]) ? $parts[0] : '';
+$id_path = isset($parts[1]) ? $parts[1] : null;
+
+// Tenta ler do jeito clássico (?acao=provas)
+$recurso_get = isset($_GET['acao']) ? $_GET['acao'] : '';
+$id_get = isset($_GET['id']) ? $_GET['id'] : null;
+
+// Se o clássico existir, usa ele. Se não, usa o bonito.
+$recurso = $recurso_get ? $recurso_get : $recurso_path;
+$id = $id_get ? $id_get : $id_path;
+
+// Se não tiver nada, mostra que está vivo
+if (empty($recurso)) {
+    echo json_encode([
+        "status" => "API ONLINE",
+        "ambiente" => "Windows/XAMPP",
+        "dica" => "Tente acessar: /api.php?acao=avisos"
+    ]);
+    exit;
+}
+
+$metodo = $_SERVER['REQUEST_METHOD'];
+
+// --- 6. SWITCH DE ROTAS ---
+
+switch ($recurso) {
+    // --- LEITURA (GET) ---
+    case 'provas':
+        $controller = new TesteController($db);
+        $alunoId = $id ? $id : 1; 
+        $controller->listarProvas($alunoId);
+        break;
+
+    case 'avisos':
+        $controller = new TesteController($db);
+        $controller->listarAvisos();
+        break;
+
+    case 'chat':
+        $controller = new TesteController($db);
+        $alunoId = $id ? $id : 1;
+        $controller->listarChat($alunoId);
+        break;
+
+    case 'solicitacoes':
+        $controller = new TesteController($db);
+        $alunoId = $id ? $id : 1;
+        $controller->listarSolicitacoes($alunoId);
+        break;
+
+    // --- LOGIN (POST) ---
+    case 'login':
+        if ($metodo === 'POST') {
+            $auth = new AuthController($db);
+            $auth->login();
         } else {
-            echo json_encode(["sucesso" => false, "mensagem" => "Erro ao salvar token"]);
+            echo json_encode(["erro" => "Login exige metodo POST"]);
         }
-    }
+        break;
 
-    // 2. Enviar nova mensagem no Chat
-    public function novaMensagemChat() {
-        $data = json_decode(file_get_contents("php://input"));
-        
-        if(!isset($data->id_aluno) || !isset($data->mensagem)) {
-            echo json_encode(["sucesso" => false, "mensagem" => "Dados incompletos"]);
-            return;
+    // --- ESCRITA (POST) ---
+    case 'salvar_token':
+        if ($metodo === 'POST') {
+            $app = new AppController($db);
+            $app->salvarToken();
         }
+        break;
 
-        $model = new Chat($this->db);
-        if($model->enviarMensagem($data->id_aluno, $data->mensagem)) {
-            echo json_encode(["sucesso" => true, "mensagem" => "Enviado"]);
-        } else {
-            echo json_encode(["sucesso" => false, "mensagem" => "Erro ao enviar"]);
+    case 'enviar_chat':
+        if ($metodo === 'POST') {
+            $app = new AppController($db);
+            $app->novaMensagemChat();
         }
-    }
+        break;
 
-    // 3. Criar nova solicitação (Atestado/Financeiro)
-    public function novaSolicitacao() {
-        $data = json_decode(file_get_contents("php://input"));
-        
-        if(!isset($data->id_aluno) || !isset($data->setor) || !isset($data->mensagem)) {
-            echo json_encode(["sucesso" => false, "mensagem" => "Dados incompletos"]);
-            return;
+    case 'nova_solicitacao':
+        if ($metodo === 'POST') {
+            $app = new AppController($db);
+            $app->novaSolicitacao();
         }
+        break;
 
-        $model = new Solicitacao($this->db);
-        // Assunto é opcional, se não vier fica vazio
-        $assunto = isset($data->assunto) ? $data->assunto : '';
-
-        if($model->criar($data->id_aluno, $data->setor, $assunto, $data->mensagem)) {
-            echo json_encode(["sucesso" => true, "mensagem" => "Solicitação criada"]);
-        } else {
-            echo json_encode(["sucesso" => false, "mensagem" => "Erro ao criar"]);
-        }
-    }
+    default:
+        http_response_code(404);
+        echo json_encode([
+            "erro" => "Rota nao encontrada",
+            "tentativa" => $recurso
+        ]);
+        break;
 }
 ?>
