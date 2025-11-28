@@ -1,5 +1,5 @@
 <?php
-// --- 1. MOSTRAR ERROS (Para você ver se algo der errado) ---
+// --- 1. CONFIGURAÇÕES DE ERRO ---
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-// --- 3. IMPORTAR ARQUIVOS (Se faltar algum, ele avisa) ---
+// --- 3. IMPORTAR ARQUIVOS ---
 $files = [
     'config/Database.php',
     'controllers/AuthController.php',
@@ -25,112 +25,122 @@ $files = [
 
 foreach ($files as $file) {
     if (!file_exists($file)) {
-        die(json_encode(["erro_critico" => "Arquivo faltando: $file. Verifique as pastas controllers e config."]));
+        die(json_encode(["erro_critico" => "Arquivo faltando: $file"]));
     }
     require_once $file;
 }
 
-// --- 4. CONECTAR NO BANCO ---
+// --- 4. CONEXÃO COM O BANCO ---
 try {
     $database = new Database();
     $db = $database->getConnection();
 } catch (Exception $e) {
-    die(json_encode(["erro_critico" => "Banco não conectou: " . $e->getMessage()]));
+    die(json_encode(["erro_critico" => "Falha no banco: " . $e->getMessage()]));
 }
 
-// --- 5. ROTEADOR HÍBRIDO (O Segredo para funcionar no XAMPP) ---
+// --- 5. ROTEAMENTO ---
+$acao = isset($_GET['acao']) ? $_GET['acao'] : '';
+$id = isset($_GET['id']) ? $_GET['id'] : 1; 
+$metodo = $_SERVER['REQUEST_METHOD'];
 
-// Tenta ler do jeito bonito (/provas)
+// Tenta pegar também da URL amigável se o GET estiver vazio
 $path_info = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
-$parts = explode('/', trim($path_info, '/'));
-$recurso_path = isset($parts[0]) ? $parts[0] : '';
-$id_path = isset($parts[1]) ? $parts[1] : null;
+if (empty($acao) && !empty($path_info)) {
+    $parts = explode('/', trim($path_info, '/'));
+    $acao = isset($parts[0]) ? $parts[0] : '';
+    if (isset($parts[1])) {
+        $id = $parts[1];
+    }
+}
 
-// Tenta ler do jeito clássico (?acao=provas)
-$recurso_get = isset($_GET['acao']) ? $_GET['acao'] : '';
-$id_get = isset($_GET['id']) ? $_GET['id'] : null;
-
-// Se o clássico existir, usa ele. Se não, usa o bonito.
-$recurso = $recurso_get ? $recurso_get : $recurso_path;
-$id = $id_get ? $id_get : $id_path;
-
-// Se não tiver nada, mostra que está vivo
-if (empty($recurso)) {
-    echo json_encode([
-        "status" => "API ONLINE",
-        "ambiente" => "Windows/XAMPP",
-        "dica" => "Tente acessar: /api.php?acao=avisos"
-    ]);
+// Se não tiver ação nenhuma
+if (empty($acao)) {
+    echo json_encode(["status" => "API ONLINE", "mensagem" => "Use ?acao=avisos para testar"]);
     exit;
 }
 
-$metodo = $_SERVER['REQUEST_METHOD'];
+// --- 6. ROTAS (USANDO IF / ELSEIF) ---
 
-// --- 6. SWITCH DE ROTAS ---
+// ---------------- AUTENTICAÇÃO ----------------
+if ($acao == 'login') {
+    if ($metodo == 'POST') {
+        $auth = new AuthController($db);
+        $auth->login();
+    } else {
+        echo json_encode(["erro" => "Login exige metodo POST"]);
+    }
+}
 
-switch ($recurso) {
-    // --- LEITURA (GET) ---
-    case 'provas':
-        $controller = new TesteController($db);
-        $alunoId = $id ? $id : 1; 
-        $controller->listarProvas($alunoId);
-        break;
+// ---------------- LEITURA (GET) ----------------
+elseif ($acao == 'provas') {
+    $controller = new TesteController($db);
+    $controller->listarProvas($id);
+}
 
-    case 'avisos':
-        $controller = new TesteController($db);
-        $controller->listarAvisos();
-        break;
+elseif ($acao == 'avisos') {
+    $controller = new TesteController($db);
+    $controller->listarAvisos();
+}
 
-    case 'chat':
-        $controller = new TesteController($db);
-        $alunoId = $id ? $id : 1;
-        $controller->listarChat($alunoId);
-        break;
+elseif ($acao == 'chat') {
+    $controller = new TesteController($db);
+    $controller->listarChat($id);
+}
 
-    case 'solicitacoes':
-        $controller = new TesteController($db);
-        $alunoId = $id ? $id : 1;
-        $controller->listarSolicitacoes($alunoId);
-        break;
+elseif ($acao == 'solicitacoes') {
+    $controller = new TesteController($db);
+    $controller->listarSolicitacoes($id);
+}
 
-    // --- LOGIN (POST) ---
-    case 'login':
-        if ($metodo === 'POST') {
-            $auth = new AuthController($db);
-            $auth->login();
-        } else {
-            echo json_encode(["erro" => "Login exige metodo POST"]);
-        }
-        break;
+// ---------------- ESCRITA (POST) ----------------
+elseif ($acao == 'salvar_token') {
+    if ($metodo == 'POST') {
+        $app = new AppController($db);
+        $app->salvarToken();
+    } else {
+        echo json_encode(["erro" => "Metodo incorreto"]);
+    }
+}
 
-    // --- ESCRITA (POST) ---
-    case 'salvar_token':
-        if ($metodo === 'POST') {
-            $app = new AppController($db);
-            $app->salvarToken();
-        }
-        break;
+elseif ($acao == 'enviar_chat') {
+    if ($metodo == 'POST') {
+        $app = new AppController($db);
+        $app->novaMensagemChat();
+    } else {
+        echo json_encode(["erro" => "Metodo incorreto"]);
+    }
+}
 
-    case 'enviar_chat':
-        if ($metodo === 'POST') {
-            $app = new AppController($db);
-            $app->novaMensagemChat();
-        }
-        break;
+elseif ($acao == 'nova_solicitacao') {
+    if ($metodo == 'POST') {
+        $app = new AppController($db);
+        $app->novaSolicitacao();
+    } else {
+        echo json_encode(["erro" => "Metodo incorreto"]);
+    }
+}
 
-    case 'nova_solicitacao':
-        if ($metodo === 'POST') {
-            $app = new AppController($db);
-            $app->novaSolicitacao();
-        }
-        break;
+elseif ($acao == 'marcar_lido') {
+    if ($metodo == 'POST') {
+        $app = new AppController($db);
+        $app->marcarAvisoLido();
+    } else {
+        echo json_encode(["erro" => "Metodo incorreto"]);
+    }
+}
 
-    default:
-        http_response_code(404);
-        echo json_encode([
-            "erro" => "Rota nao encontrada",
-            "tentativa" => $recurso
-        ]);
-        break;
+elseif ($acao == 'disparar_aviso') { // <-- NOVO ENDPOINT DE DISPARO DA ESCOLA
+    if ($metodo == 'POST') {
+        $app = new AppController($db);
+        $app->dispararAviso();
+    } else {
+        echo json_encode(["erro" => "Metodo incorreto"]);
+    }
+}
+
+// ---------------- ROTA NÃO ENCONTRADA ----------------
+else {
+    http_response_code(404);
+    echo json_encode(["erro" => "Rota '$acao' nao encontrada"]);
 }
 ?>

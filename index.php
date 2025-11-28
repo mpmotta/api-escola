@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Testes API - Alcides Maya</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; }
@@ -45,9 +44,8 @@
 
 <div class="container">
     <div class="header">
-        <div class="logo-circle">A</div>
         <div>
-            <h1>Painel de Controle da API</h1>
+            <h1>Painel de Testes da API</h1>
             <p class="subtitle">Backend Alcides Maya • Ambiente de Testes</p>
         </div>
     </div>
@@ -108,6 +106,18 @@
             <span class="card-method post">POST</span>
             <span class="card-title">Salvar Token Push</span>
             <span class="card-desc">Regista o dispositivo para notificações.</span>
+        </a>
+
+        <a href="tests/teste_marcar_lido.php" target="_blank" class="card">
+            <span class="card-method post">POST</span>
+            <span class="card-title">Marcar Aviso Como Lido</span>
+            <span class="card-desc">Essencial para a lógica da "bolinha vermelha".</span>
+        </a>
+        
+        <a href="tests/teste_disparo_aviso.php" target="_blank" class="card">
+            <span class="card-method post">POST</span>
+            <span class="card-title">Disparar Novo Aviso</span>
+            <span class="card-desc">Salva o aviso no banco (Disparado pela Coordenação).</span>
         </a>
     </div>
 
