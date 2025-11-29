@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Tempo de geração: 28-Nov-2025 às 16:04
+-- Tempo de geração: 29-Nov-2025 às 01:56
 -- Versão do servidor: 10.4.27-MariaDB
 -- versão do PHP: 8.1.12
 
@@ -44,7 +44,7 @@ CREATE TABLE `alunos` (
 
 INSERT INTO `alunos` (`id`, `ra`, `senha`, `nome_completo`, `email`, `foto_perfil`, `ativo`, `criado_em`) VALUES
 (1, '2025', '123', 'Marcio Motta', 'marcio@teste.com', NULL, 1, '2025-11-28 12:41:02'),
-(2, '2025001', '123', 'Marcio Motta', 'marcio@teste.com', NULL, 1, '2025-11-28 12:53:49'),
+(2, '2025001', '123', 'Pedro Henrique', 'pedro@teste.com', NULL, 1, '2025-11-28 12:53:49'),
 (3, '2025002', '123', 'Ana Silva', 'ana@teste.com', NULL, 1, '2025-11-28 12:53:49');
 
 -- --------------------------------------------------------
@@ -109,7 +109,11 @@ CREATE TABLE `chat_nadd` (
 INSERT INTO `chat_nadd` (`id`, `id_aluno`, `remetente`, `tipo_mensagem`, `mensagem`, `url_arquivo`, `duracao_audio`, `lida`, `data_envio`) VALUES
 (1, 1, 'ALUNO', 'TEXTO', 'Olá, preciso de ajuda com meu boleto.', NULL, NULL, 0, '2025-02-10 17:00:00'),
 (2, 1, 'NADD', 'TEXTO', 'Boa tarde Marcio! Qual a dúvida?', NULL, NULL, 0, '2025-02-10 17:05:00'),
-(3, 1, 'ALUNO', 'TEXTO', 'Não recebi no email.', NULL, NULL, 0, '2025-02-10 17:06:00');
+(3, 1, 'ALUNO', 'TEXTO', 'Não recebi no email.', NULL, NULL, 0, '2025-02-10 17:06:00'),
+(4, 2, 'ALUNO', 'TEXTO', 'Olá NADD, meu atestado já foi analisado?', NULL, NULL, 0, '2025-11-28 22:43:12'),
+(5, 2, 'NADD', 'TEXTO', 'Sim, Ana. Pode retirar na secretaria. Assunto encerrado.', NULL, NULL, 0, '2025-11-28 23:43:12'),
+(6, 3, 'ALUNO', 'TEXTO', 'Olá, Tem prova na sexta?', NULL, NULL, 0, '2025-11-28 22:44:41'),
+(7, 3, 'NADD', 'TEXTO', 'Não, na próxima sexta não tem aula.', NULL, NULL, 0, '2025-11-28 23:44:41');
 
 -- --------------------------------------------------------
 
@@ -336,7 +340,7 @@ ALTER TABLE `avisos`
 -- AUTO_INCREMENT de tabela `chat_nadd`
 --
 ALTER TABLE `chat_nadd`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de tabela `disciplines`
