@@ -20,7 +20,8 @@ $files = [
     'config/Database.php',
     'controllers/AuthController.php',
     'controllers/TesteController.php',
-    'controllers/AppController.php'
+    'controllers/AppController.php',
+    'controllers/ChatController.php' // Incluído o ChatController para evitar o erro anterior
 ];
 
 foreach ($files as $file) {
@@ -40,7 +41,7 @@ try {
 
 // --- 5. ROTEAMENTO ---
 $acao = isset($_GET['acao']) ? $_GET['acao'] : '';
-$id = isset($_GET['id']) ? $_GET['id'] : 1; 
+$id = isset($_GET['id']) ? $_GET['id'] : null; 
 $metodo = $_SERVER['REQUEST_METHOD'];
 
 // Tenta pegar também da URL amigável se o GET estiver vazio
@@ -82,14 +83,14 @@ elseif ($acao == 'avisos') {
     $controller->listarAvisos();
 }
 
-elseif ($acao == 'chat') {
-    $controller = new TesteController($db);
-    $controller->listarChat($id);
-}
-
 elseif ($acao == 'solicitacoes') {
     $controller = new TesteController($db);
     $controller->listarSolicitacoes($id);
+}
+
+elseif ($acao == 'chat') {
+    $controller = new ChatController($db);
+    $controller->listarHistorico($id);
 }
 
 // ---------------- ESCRITA (POST) ----------------
@@ -129,7 +130,7 @@ elseif ($acao == 'marcar_lido') {
     }
 }
 
-elseif ($acao == 'disparar_aviso') { // <-- NOVO ENDPOINT DE DISPARO DA ESCOLA
+elseif ($acao == 'disparar_aviso') {
     if ($metodo == 'POST') {
         $app = new AppController($db);
         $app->dispararAviso();
